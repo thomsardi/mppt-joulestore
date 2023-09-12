@@ -14,7 +14,7 @@ if __name__ == "__main__" :
     for a in epeverSettingList : #for loop to write a new setting
         mpptEpever.change_setting(a) #change setting
         
-    slaveList = mpptEpever.startScan(1,3) #start id scan
+    slaveList = mpptEpever.scan(1,3) #start id scan
     print("List of connected slave :", slaveList)
     for slave in slaveList :
         params = mpptEpever.get_current_setting(slave) #get current setting of mppt

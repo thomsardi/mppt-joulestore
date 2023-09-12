@@ -14,7 +14,7 @@ if __name__ == "__main__" :
     for a in srneSettingList : #for loop to write a new setting
         mpptSrne.change_setting(a) #change setting
         
-    slaveList = mpptSrne.startScan(1,3) #start id scan
+    slaveList = mpptSrne.scan(1,3) #start id scan
     print("List of connected slave :", slaveList)
     for slave in slaveList :
         params = mpptSrne.get_current_setting(slave) #get current setting of mppt

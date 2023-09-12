@@ -33,7 +33,7 @@ if __name__ == "__main__" :
       for a in settingList : #for loop to write a new setting
         mppt.change_setting(a) #change setting
         
-      slaveList = mppt.startScan(1,20) #start id scan
+      slaveList = mppt.scan(1,20) #start id scan
       print("List of connected slave :", slaveList)
       for slave in slaveList :
          params = mppt.get_current_setting(slave) #get current setting of mppt
@@ -66,7 +66,7 @@ if __name__ == "__main__" :
          print(mppt.get_load_info(slave)) #get load info
          print(mppt.get_load_state(slave)) #get load state
          time.sleep(0.1) #always add sleep when using modbus within for loop. without sleep, the modbus result always failed
-      # choice = not choice
+      choice = not choice
       time.sleep(0.1)
 
 
