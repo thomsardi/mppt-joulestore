@@ -1,0 +1,77 @@
+{
+    "port" : "COM11",
+    "device" : [
+        {
+            "slave" : 1,
+            "parameter" : 
+            {
+                "battery_capacity" : 896,
+                "system_voltage" : 12336,
+                "battery_type" : 0,
+                "overvoltage_threshold" : 139,
+                "charging_limit_voltage" : 138,
+                "equalizing_charge_voltage" : 136,
+                "boost_charging_voltage" : 136,
+                "floating_charging_voltage" : 136,
+                "boost_charging_recovery_voltage" : 134,
+                "overdischarge_recovery_voltage" : 122,
+                "undervoltage_warning_level" : 120,
+                "overdischarge_voltage" : 117,
+                "discharging_limit_voltage" : 115,
+                "overdischarge_time_delay" : 5,
+                "equalizing_charging_time" : 0,
+                "boost_charging_time" : 120,
+                "equalizing_charging_interval" : 0,
+                "temperature_comp" : 0
+            }
+        },
+        {
+            "slave" : 2,
+            "parameter" : 
+            {
+                "battery_capacity" : 200,
+                "system_voltage" : 65328,
+                "battery_type" : 2,
+                "overvoltage_threshold" : 160,
+                "charging_limit_voltage" : 155,
+                "equalizing_charge_voltage" : 146,
+                "boost_charging_voltage" : 144,
+                "floating_charging_voltage" : 138,
+                "boost_charging_recovery_voltage" : 132,
+                "overdischarge_recovery_voltage" : 126,
+                "undervoltage_warning_level" : 120,
+                "overdischarge_voltage" : 111,
+                "discharging_limit_voltage" : 106,
+                "overdischarge_time_delay" : 5,
+                "equalizing_charging_time" : 120,
+                "boost_charging_time" : 120,
+                "equalizing_charging_interval" : 30,
+                "temperature_comp" : 3
+            }
+        },
+        {
+            "slave" : 3,
+            "parameter" : 
+            {
+                "battery_capacity" : 896,
+                "system_voltage" : 12336,
+                "battery_type" : 0,
+                "overvoltage_threshold" : 139,
+                "charging_limit_voltage" : 138,
+                "equalizing_charge_voltage" : 136,
+                "boost_charging_voltage" : 136,
+                "floating_charging_voltage" : 136,
+                "boost_charging_recovery_voltage" : 134,
+                "overdischarge_recovery_voltage" : 122,
+                "undervoltage_warning_level" : 120,
+                "overdischarge_voltage" : 117,
+                "discharging_limit_voltage" : 115,
+                "overdischarge_time_delay" : 5,
+                "equalizing_charging_time" : 0,
+                "boost_charging_time" : 120,
+                "equalizing_charging_interval" : 0,
+                "temperature_comp" : 0
+            }
+        }
+    ]
+}
