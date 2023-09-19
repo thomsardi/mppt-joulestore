@@ -55,7 +55,7 @@ class MpptSrneSetting(ParameterSetting) :
         self.__boostChargingTime = 120
         self.__equalizingChargingInterval = 120
         self.__tempCompensation = 0
-        self.__paramList : list[int] = []
+        self.__paramList : List[int] = []
 
     def __eq__(self, other): 
         if not isinstance(other, MpptSrneSetting):
@@ -112,8 +112,8 @@ class MpptSrneSetting(ParameterSetting) :
         print ("Equalizing charging interval :", self.__equalizingChargingInterval)
         print ("Temperature compensation :", self.__tempCompensation)
     
-    def getListParam(self) -> list[int]:
-        value : list[int] = [
+    def getListParam(self) -> List[int]:
+        value : List[int] = [
             self.__id,
             self.__capacity,
             self.__systemVoltage,
@@ -137,7 +137,7 @@ class MpptSrneSetting(ParameterSetting) :
         ]
         return value
 
-    def setParam(self, registerList : list[int]) -> int:
+    def setParam(self, registerList : List[int]) -> int:
         """
         Set each member parameter, only valid if the received list length is 19
 
@@ -326,7 +326,7 @@ class MpptSrneSetting(ParameterSetting) :
         self.__equalizingChargingInterval = val
 
     @property
-    def getParamList(self) -> list[int] :
+    def getParamList(self) -> List[int] :
         return self.__paramList.copy()
 
 class SrneParserSetting(ParserSetting) :
@@ -344,9 +344,9 @@ class SrneParserSetting(ParserSetting) :
         val (dict) : dictionary of register_config
 
         Returns :
-        list[ParameterSetting] : list of ParameterSetting
+        List[ParameterSetting] : list of ParameterSetting
         """
-        deviceList : list[dict] = val['device']
+        deviceList : List[dict] = val['device']
         paramList : List[MpptSrneSetting] = []
         for a in deviceList :
             p = MpptSrneSetting()
@@ -378,7 +378,7 @@ class MpptSrne(BaseMPPTSync):
         self.__connectedSlaveList = []
 
     @property
-    def get_connected_slave_list(self) -> list[int] :
+    def get_connected_slave_list(self) -> List[int] :
         return self.__connectedSlaveList.copy()
 
     def getRegisters(self, id:int, info:tuple, input_register=False) -> list:
@@ -409,7 +409,7 @@ class MpptSrne(BaseMPPTSync):
             return -1
         return newSetting == oldSetting
 
-    def scan(self, start_id : int, end_id : int) -> list[int] :
+    def scan(self, start_id : int, end_id : int) -> List[int] :
         """
         Scan for connected id
 
@@ -418,7 +418,7 @@ class MpptSrne(BaseMPPTSync):
         end_id(int) : end id to be scanned
 
         Returns :
-        list[int] : list of connected id
+        List[int] : list of connected id
         """
         return self.startScan(startId=start_id, endId=end_id)
     
@@ -573,7 +573,7 @@ class MpptSrne(BaseMPPTSync):
         """
         return self.setLoadOff(id)
 
-    def startScan(self, startId : int, endId : int) -> list[int] :
+    def startScan(self, startId : int, endId : int) -> List[int] :
         """
         Scan for connected id
 
@@ -582,9 +582,9 @@ class MpptSrne(BaseMPPTSync):
         endId (int) : last id to be scanned
 
         Returns :
-        list[int] : list of connected id
+        List[int] : list of connected id
         """
-        connectedIdList : list[int] = []
+        connectedIdList : List[int] = []
         for i in range(startId, endId+1) :
             batterySoc = self.getBatterySocValue(i)
             if (batterySoc >= 0) :
@@ -600,7 +600,7 @@ class MpptSrne(BaseMPPTSync):
         Args :
         setting (MpptSrneSetting) : MpptSrneSetting Object, refer to MpptSrneSetting description for member information        
         """
-        value : list[int] = [
+        value : List[int] = [
             setting.capacity,
             setting.systemVoltage,
             setting.batteryType,
@@ -656,10 +656,13 @@ class MpptSrne(BaseMPPTSync):
 
         """
         response = self.getRegisters(id, MpptSrneAddress.SETTING_PARAMETER)
-        if (response.isError() and response is not None) :
-            # print("Response error")
-            return None
         p = MpptSrneSetting()
+        p.id = -1
+
+        if (response is None) : 
+            return p
+        if (response.isError()) :
+            return p
         if (not p.setParam(response.registers)) :
             print("Failed to set parameter")
             return None

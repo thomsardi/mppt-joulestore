@@ -7,7 +7,7 @@
             {
                 "battery_type" : 0,
                 "battery_capacity" : 896,
-                "temperature_comp" : 300,
+                "temperature_comp" : 0,
                 "overvoltage_disconnect" : 5570,
                 "charging_limit_voltage" : 5520,
                 "overvoltage_reconnect" : 5370,
@@ -19,7 +19,11 @@
                 "undervoltage_warning_recover" : 4900,
                 "undervoltage_warning" : 4800,
                 "low_voltage_disconnect" : 4700,
-                "discharging_limit_voltage" : 4600
+                "discharging_limit_voltage" : 4600,
+                "battery_rated_voltage" : 4,
+                "default_load_state" : 1,
+                "equalizing_duration" : 0,
+                "boost_duration" : 120
             }
         },
         {
@@ -40,7 +44,11 @@
                 "undervoltage_warning_recover" : 4900,
                 "undervoltage_warning" : 4800,
                 "low_voltage_disconnect" : 4700,
-                "discharging_limit_voltage" : 4600
+                "discharging_limit_voltage" : 4600,
+                "battery_rated_voltage" : 4,
+                "default_load_state" : 1,
+                "equalizing_duration" : 0,
+                "boost_duration" : 120
             }
         },
         {
@@ -61,7 +69,11 @@
                 "undervoltage_warning_recover" : 4900,
                 "undervoltage_warning" : 4800,
                 "low_voltage_disconnect" : 4700,
-                "discharging_limit_voltage" : 4600
+                "discharging_limit_voltage" : 4600,
+                "battery_rated_voltage" : 4,
+                "default_load_state" : 1,
+                "equalizing_duration" : 0,
+                "boost_duration" : 120
             }
         }
     ]

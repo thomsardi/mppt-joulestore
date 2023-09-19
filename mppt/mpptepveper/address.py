@@ -79,10 +79,15 @@ class MpptEpeverAddress() :
     LOW_VOLTAGE_DISCONNECT = (0x900d, 1)
     DISCHARGING_LIMIT_VOLTAGE = (0x900e, 1)
 
+    NIGHT_TIME_THRESHOLD = (0x901e, 1)
+    DAY_TIME_THRESHOLD = (0x9020, 1)
+
     #Function code 03 to read, 16 to write
     BATTERY_RATED_VOLTAGE_PARAMETER = (0x9067, 1)
 
     #Function code 03 to read, 16 to write
+    OTHER_PARAMETER = (0x906a, 3)
+    DEFAULT_LOAD_STATE = (0x906a, 1)
     EQUALIZE_DURATION = (0x906b, 1)
     BOOST_DURATION = (0x906c, 1)
     BATTERY_DISCHARGE_PERCENTAGE = (0x906d, 1)
@@ -94,9 +99,8 @@ class MpptEpeverAddress() :
     LOAD_MANUAL_CONTROL = (0x2, 1)
     LOAD_DEFAULT_CONTROL = (0x3, 1)
     LOAD_CONTROL_MODE = (0x903d, 1)
-    DEFAULT_LOAD_STATE = (0x906a, 1)
     RESTORE_SYSTEM_DEFAULTS = (0x13, 1)
-
+    CLEAR_LOG = (0x14, 1)
 
     MODE = (36967, 1)
     DATETIME_ADDR = (0x9013, 3)

@@ -1,7 +1,7 @@
 # from mppt.logger import *
 from pymodbus.client.sync import ModbusSerialClient as ModbusClient
 from .address import *
-from ..base import BaseMPPTSync, ParameterSetting, Status, MpptError, ParserSetting
+from ..base import BaseMPPTSync, ParameterSetting, Status, MpptError, ParserSetting, BatteryRatedVoltage, BatteryType
 import datetime
 import time
 from typing import List
@@ -29,9 +29,13 @@ class MpptEpeverSetting(ParameterSetting) :
         underVoltageWarning : default 4800
         lowVoltageDisconnect : default 4700
         dischargingLimitVoltage : default 4600
+        batteryRatedVoltage : default 4
+        defaultLoadState : default 1
+        equalizingDuration : default 0
+        boostDuration : 120
         """
         self.__id = 0
-        self.__batteryType = 0
+        self.__batteryType = BatteryType.USER.value
         self.__capacity = 832
         self.__tempCompensation = 300
         self.__overvoltageDisconnect = 5570
@@ -46,6 +50,11 @@ class MpptEpeverSetting(ParameterSetting) :
         self.__underVoltageWarning = 4800
         self.__lowVoltageDisconnect = 4700
         self.__dischargingLimitVoltage = 4600
+        self.__batteryRatedVoltage = BatteryRatedVoltage.VOLTAGE_48V.value
+        self.__defaultLoadState = 1
+        self.__equalizingDuration = 0
+        self.__boostDuration = 120
+        self.paramList = [0] * 19
 
     def __eq__(self, other): 
         if not isinstance(other, MpptEpeverSetting):
@@ -68,7 +77,11 @@ class MpptEpeverSetting(ParameterSetting) :
         and self.underVoltageWarningRecover == other.underVoltageWarningRecover \
         and self.underVoltageWarning == other.underVoltageWarning \
         and self.lowVoltageDisconnect == other.lowVoltageDisconnect \
-        and self.dischargingLimitVoltage == other.dischargingLimitVoltage :
+        and self.dischargingLimitVoltage == other.dischargingLimitVoltage \
+        and self.batteryRatedVoltage == other.batteryRatedVoltage \
+        and self.defaultLoadState == other.defaultLoadState \
+        and self.equalizingDuration == other.equalizingDuration \
+        and self.boostDuration == other.boostDuration :
             return True
         else :
             return False
@@ -93,9 +106,13 @@ class MpptEpeverSetting(ParameterSetting) :
         print ("Undervoltage warning :", self.__underVoltageWarning)
         print ("Low voltage disconnect :", self.__lowVoltageDisconnect)
         print ("Discharging limit voltage :", self.__dischargingLimitVoltage)
+        print ("Battery rated voltage :", self.__batteryRatedVoltage)
+        print ("Default load state :", self.__defaultLoadState)
+        print ("Equalizing duration :", self.__equalizingDuration)
+        print ("Boost duration :", self.__boostDuration)
     
-    def getListParam(self) -> list[int]:
-        value : list[int] = [
+    def getListParam(self) -> List[int]:
+        value : List[int] = [
             self.__id,
             self.__batteryType,
             self.__capacity,
@@ -111,13 +128,17 @@ class MpptEpeverSetting(ParameterSetting) :
             self.__underVoltageWarningRecover,
             self.__underVoltageWarning,
             self.__lowVoltageDisconnect,
-            self.__dischargingLimitVoltage
+            self.__dischargingLimitVoltage,
+            self.__batteryRatedVoltage,
+            self.__defaultLoadState,
+            self.__equalizingDuration,
+            self.__boostDuration
         ]
         return value
 
-    def setParam(self, registerList : list[int]) -> int:
+    def setParam(self, registerList : List[int]) -> int:
         """
-        Set each member parameter, only valid if the received list length is 15
+        Set each member parameter, only valid if the received list length is 15, 3, 1
 
         Args :
         registerList (list) : a list of integer value, received from register modbus
@@ -139,7 +160,19 @@ class MpptEpeverSetting(ParameterSetting) :
             self.__underVoltageWarning = registerList[12]
             self.__lowVoltageDisconnect = registerList[13]
             self.__dischargingLimitVoltage = registerList[14]
-            self.paramList = registerList
+            for index, val in enumerate(registerList) :
+                self.paramList[index] = val
+            return 1
+        elif (length == 1) :
+            self.paramList[15] = registerList[0]
+            self.__batteryRatedVoltage = registerList[0]
+            return 1
+        elif (length == 3) :
+            for index, val in enumerate (registerList) :
+                self.paramList[index+16] = val
+            self.__defaultLoadState = registerList[0]
+            self.__equalizingDuration = registerList[1]
+            self.__boostDuration = registerList[2]
             return 1
         return -1
 
@@ -271,6 +304,38 @@ class MpptEpeverSetting(ParameterSetting) :
     def dischargingLimitVoltage(self, val : int) :
         self.__dischargingLimitVoltage = val
 
+    @property
+    def batteryRatedVoltage(self) -> int :
+        return self.__batteryRatedVoltage
+    
+    @batteryRatedVoltage.setter
+    def batteryRatedVoltage(self, val : int) :
+        self.__batteryRatedVoltage = val
+
+    @property
+    def defaultLoadState(self) -> int :
+        return self.__defaultLoadState
+    
+    @defaultLoadState.setter
+    def defaultLoadState(self, val : int) :
+        self.__defaultLoadState = val
+
+    @property
+    def equalizingDuration(self) -> int :
+        return self.__equalizingDuration
+    
+    @equalizingDuration.setter
+    def equalizingDuration(self, val : int) :
+        self.__equalizingDuration = val
+
+    @property
+    def boostDuration(self) -> int :
+        return self.__boostDuration
+    
+    @boostDuration.setter
+    def boostDuration(self, val : int) :
+        self.__boostDuration = val
+
 class EpeverParserSetting(ParserSetting) :
     """
     Parser class for epever json setting
@@ -286,9 +351,9 @@ class EpeverParserSetting(ParserSetting) :
         val (dict) : dictionary of register_config
 
         Returns :
-        list[MpptEpeverSetting] : list of MpptEpeverSetting
+        List[MpptEpeverSetting] : list of MpptEpeverSetting
         """
-        deviceList : list[dict] = val['device']
+        deviceList : List[dict] = val['device']
         paramList : List[MpptEpeverSetting] = []
         for a in deviceList :
             p = MpptEpeverSetting()
@@ -308,6 +373,10 @@ class EpeverParserSetting(ParserSetting) :
             p.underVoltageWarning = a['parameter']['undervoltage_warning']
             p.lowVoltageDisconnect = a['parameter']['low_voltage_disconnect']
             p.dischargingLimitVoltage = a['parameter']['discharging_limit_voltage']
+            p.batteryRatedVoltage = a['parameter']['battery_rated_voltage']
+            p.defaultLoadState = a['parameter']['default_load_state']
+            p.equalizingDuration = a['parameter']['equalizing_duration']
+            p.boostDuration = a['parameter']['boost_duration']
             paramList.append(p)
         return paramList
 
@@ -317,7 +386,7 @@ class MPPTEPVEPER(BaseMPPTSync):
         self.__connectedSlaveList = []
 
     @property
-    def get_connected_slave_list(self) -> list[int] :
+    def get_connected_slave_list(self) -> List[int] :
         return self.__connectedSlaveList.copy()
 
     def getRegisters(self, id:int, info:tuple, input_register=False) -> list:
@@ -351,7 +420,7 @@ class MPPTEPVEPER(BaseMPPTSync):
             return -1
         return newSetting == oldSetting
 
-    def scan(self, start_id : int, end_id : int) -> list[int] :
+    def scan(self, start_id : int, end_id : int) -> List[int] :
         """
         Scan for connected id
 
@@ -360,7 +429,7 @@ class MPPTEPVEPER(BaseMPPTSync):
         end_id(int) : end id to be scanned
 
         Returns :
-        list[int] : list of connected id
+        List[int] : list of connected id
         """
         return self.startScan(startId=start_id, endId=end_id)
     
@@ -485,7 +554,7 @@ class MPPTEPVEPER(BaseMPPTSync):
         """
         return self.setLoadOff(id)
 
-    def startScan(self, startId : int, endId : int) -> list[int] :
+    def startScan(self, startId : int, endId : int) -> List[int] :
         """
         Scan for connected id
 
@@ -494,9 +563,9 @@ class MPPTEPVEPER(BaseMPPTSync):
         endId (int) : last id to be scanned
 
         Returns :
-        list[int] : list of connected id
+        List[int] : list of connected id
         """
-        connectedIdList : list[int] = []
+        connectedIdList : List[int] = []
         for i in range(startId, endId+1) :
             arrayRatedVoltage = self.getArrayRatedVoltage(i)
             if (arrayRatedVoltage >= 0) :
@@ -512,7 +581,7 @@ class MPPTEPVEPER(BaseMPPTSync):
         Args :
         setting (MpptEpeverSetting) : MpptEpeverSetting Object, refer to MpptEpeverSetting description for member information        
         """
-        value : list[int] = [
+        value : List[int] = [
             setting.batteryType,
             setting.capacity,
             setting.tempCompensation,
@@ -530,14 +599,52 @@ class MPPTEPVEPER(BaseMPPTSync):
             setting.dischargingLimitVoltage
         ]
 
-        if (len(value) == 15) :
-            request = self.setRegisters(setting.id, MpptEpeverAddress.SETTING_PARAMETER[0], value)
-            if (not request.isError()) :
-                return 1
-            else :
-                return 0
-        else :
+        battType = [member.value for member in BatteryType]
+        battRatedVoltage = [member.value for member in BatteryRatedVoltage]
+
+        if setting.batteryType not in battType :
+            print("invalid type")
             return 0
+
+        if setting.batteryRatedVoltage not in battRatedVoltage :
+            print("invalid rated voltage")
+            return 0
+
+        request = self.setRegisters(setting.id, MpptEpeverAddress.SETTING_PARAMETER[0], value)
+        
+        if (request is None) :
+            return 0
+        
+        if (request.isError()) :
+            return 0
+            
+        value : List[int] = [
+            setting.batteryRatedVoltage
+        ]
+
+        request = self.setRegisters(setting.id, MpptEpeverAddress.BATTERY_RATED_VOLTAGE_PARAMETER[0], value)
+
+        if (request is None) :
+            return 0
+        
+        if (request.isError()) :
+            return 0
+        
+        value : List[int] = [
+            setting.defaultLoadState,
+            setting.equalizingDuration,
+            setting.boostDuration
+        ]
+
+        request = self.setRegisters(setting.id, MpptEpeverAddress.OTHER_PARAMETER[0], value)
+
+        if (request is None) :
+            return 0
+        
+        if (request.isError()) :
+            return 0
+        
+        return 1
 
     def getArrayRatedVoltage(self, id : int) -> int :
         """
@@ -551,8 +658,9 @@ class MPPTEPVEPER(BaseMPPTSync):
         """
         ratedVoltage = -1
         response = self.getRegisters(id, MpptEpeverAddress.ARRAY_RATED_VOLTAGE, input_register=True)
-        if (not response.isError() and response is not None) :
-            ratedVoltage = response.registers[0]
+        if (response is not None) :
+            if (not response.isError()) :
+                ratedVoltage = response.registers[0]
         return ratedVoltage
 
     def getPVInfo(self, id:int):
@@ -579,14 +687,43 @@ class MPPTEPVEPER(BaseMPPTSync):
         MpptEpeverSetting : object
 
         """
-        response = self.getRegisters(id, MpptEpeverAddress.SETTING_PARAMETER)
-        if (response.isError() and response is not None) :
-            # print("Response error")
-            return None
         p = MpptEpeverSetting()
+        response = self.getRegisters(id, MpptEpeverAddress.SETTING_PARAMETER)
+        
+        if (response is not None) :
+            if (response.isError()) :
+                return None
+        else :
+            return None
+        
         if (not p.setParam(response.registers)) :
             print("Failed to set parameter")
             return None
+        
+        response = self.getRegisters(id, MpptEpeverAddress.BATTERY_RATED_VOLTAGE_PARAMETER)
+        
+        if (response is not None) :
+            if (response.isError()) :
+                return None
+        else :
+            return None
+
+        if (not p.setParam(response.registers)) :
+            print("Failed to set parameter")
+            return None
+
+        response = self.getRegisters(id, MpptEpeverAddress.OTHER_PARAMETER)
+        
+        if (response is not None) :
+            if (response.isError()) :
+                return None
+        else :
+            return None
+
+        if (not p.setParam(response.registers)) :
+            print("Failed to set parameter")
+            return None
+
         p.id = id
         return p
 
@@ -604,10 +741,11 @@ class MPPTEPVEPER(BaseMPPTSync):
         current = -1
         power = -1
         response = self.getRegisters(id, MpptEpeverAddress.PV_INFO, input_register=True)
-        if (not response.isError() and response is not None) :
-            voltage = round(response.registers[0] / 100, 2)
-            current = round(response.registers[1] / 100, 2)
-            power = round(((response.registers[3] << 16) + response.registers[2]) / 100, 2)
+        if (response is not None) :
+            if (not response.isError()) :
+                voltage = round(response.registers[0] / 100, 2)
+                current = round(response.registers[1] / 100, 2)
+                power = round(((response.registers[3] << 16) + response.registers[2]) / 100, 2)
         
         result = {
             'pv_voltage': {
@@ -650,11 +788,12 @@ class MPPTEPVEPER(BaseMPPTSync):
         generatedEnergyThisYear = -1
         generatedEnergyTotal = -1
         response = self.getRegisters(id, MpptEpeverAddress.GENERATED_ENERGY_INFO, input_register=True)
-        if (not response.isError() and response is not None) :
-            generatedEnergyToday = ((response.registers[1] << 16) + response.registers[0]) / 100
-            generatedEnergyThisMonth = ((response.registers[3] << 16) + response.registers[2]) / 100
-            generatedEnergyThisYear = ((response.registers[5] << 16) + response.registers[4]) / 100
-            generatedEnergyTotal = ((response.registers[7] << 16) + response.registers[6]) / 100
+        if (response is not None) :
+            if (not response.isError()) :
+                generatedEnergyToday = ((response.registers[1] << 16) + response.registers[0]) / 100
+                generatedEnergyThisMonth = ((response.registers[3] << 16) + response.registers[2]) / 100
+                generatedEnergyThisYear = ((response.registers[5] << 16) + response.registers[4]) / 100
+                generatedEnergyTotal = ((response.registers[7] << 16) + response.registers[6]) / 100
 
         result = {
             'harvest_energy': {
@@ -676,6 +815,57 @@ class MPPTEPVEPER(BaseMPPTSync):
         }
         return result
     
+    def getNightTimeThreshold(self, id : int) -> int :
+        """
+        Get all PV info such as voltage, current and power
+
+        Args :
+        id (int) : slave id of the target device
+
+        Returns :
+        dict : dictionary with key:value pair
+        """
+        value = -1
+        response = self.getRegisters(id, MpptEpeverAddress.NIGHT_TIME_THRESHOLD)
+        if (response is not None) :
+            if (not response.isError()) :
+                value = round(response.registers[0] / 100, 2) 
+        
+        result = {
+            'night_time_threshold': {
+                'value': value,
+                'satuan': 'Volt'
+            }
+        }
+        
+        return result
+    
+    def getDayTimeThreshold(self, id : int) -> int :
+        """
+        Get all PV info such as voltage, current and power
+
+        Args :
+        id (int) : slave id of the target device
+
+        Returns :
+        dict : dictionary with key:value pair
+        """
+        value = -1
+        response = self.getRegisters(id, MpptEpeverAddress.DAY_TIME_THRESHOLD)
+        
+        if (response is not None) :
+            if (not response.isError()) :
+                value = round(response.registers[0] / 100, 2)            
+        
+        result = {
+            'day_time_threshold': {
+                'value': value,
+                'satuan': 'Volt'
+            }
+        }
+        
+        return result
+
     def setLoadOn(self, id : int) -> int :
         """
         Set load on
@@ -687,7 +877,7 @@ class MPPTEPVEPER(BaseMPPTSync):
         int : 1 if success, 0 if failed
         """
         request = self.client.write_coil(MpptEpeverAddress.LOAD_MANUAL_CONTROL[0], 1, unit=id)
-        if (request.isError()) :
+        if (request.isError()) or (request is None):
             return 0
         return 1
     
@@ -702,7 +892,7 @@ class MPPTEPVEPER(BaseMPPTSync):
         int : 1 if success, 0 if failed
         """
         request = self.client.write_coil(MpptEpeverAddress.LOAD_MANUAL_CONTROL[0], 0, unit=id)
-        if (request.isError()) :
+        if (request.isError()) or (request is None):
             return 0
         return 1
     
@@ -717,7 +907,7 @@ class MPPTEPVEPER(BaseMPPTSync):
         int : 1 if success, 0 if failed
         """
         request = self.client.write_coil(MpptEpeverAddress.CHARGING_SET[0], 1, unit=id)
-        if (request.isError()) :
+        if (request.isError()) or (request is None):
             return 0
         return 1
     
@@ -732,7 +922,7 @@ class MPPTEPVEPER(BaseMPPTSync):
         int : 1 if success, 0 if failed
         """
         request = self.client.write_coil(MpptEpeverAddress.CHARGING_SET[0], 0, unit=id)
-        if (request.isError()) :
+        if (request.isError()) or (request is None):
             return 0
         return 1
     
@@ -747,7 +937,7 @@ class MPPTEPVEPER(BaseMPPTSync):
         int : 1 if success, 0 if failed
         """
         request = self.client.write_coil(MpptEpeverAddress.OUTPUT_CONTROL_MODE[0], 1, unit=id)
-        if (request.isError()) :
+        if (request.isError()) or (request is None):
             return 0
         return 1
     
@@ -762,7 +952,7 @@ class MPPTEPVEPER(BaseMPPTSync):
         int : 1 if success, 0 if failed
         """
         request = self.client.write_coil(MpptEpeverAddress.OUTPUT_CONTROL_MODE[0], 0, unit=id)
-        if (request.isError()) :
+        if (request.isError()) or (request is None):
             return 0
         return 1
     
@@ -777,7 +967,7 @@ class MPPTEPVEPER(BaseMPPTSync):
         int : 1 if success, 0 if failed
         """
         request = self.client.write_coil(MpptEpeverAddress.DEFAULT_LOAD_STATE[0], 1, unit=id)
-        if (request.isError()) :
+        if (request.isError()) or (request is None):
             return 0
         return 1
     
@@ -792,7 +982,7 @@ class MPPTEPVEPER(BaseMPPTSync):
         int : 1 if success, 0 if failed
         """
         request = self.client.write_coil(MpptEpeverAddress.DEFAULT_LOAD_STATE[0], 0, unit=id)
-        if (request.isError()) :
+        if (request.isError()) or (request is None):
             return 0
         return 1
 
@@ -806,6 +996,72 @@ class MPPTEPVEPER(BaseMPPTSync):
     def setMode(self, id, val=[4,]):
         request =self.setRegisters(id, MpptEpeverAddress.MODE[0], val)
         return request
+    
+    def setChargingModeSoc(self, id : int) -> int:
+        """
+        Set Bulk Parameter, convert MpptEpeverSetting into list of integer with length of 15
+        
+        Args :
+        setting (MpptEpeverSetting) : MpptEpeverSetting Object, refer to MpptEpeverSetting description for member information        
+        """
+        
+        request = self.setRegisters(id, MpptEpeverAddress.CHARGING_MODE[0], 1)
+        
+        if (request is None) :
+            return 0
+        
+        if (not request.isError()) :
+            return 1
+        else :
+            return 0
+        
+    def setChargingModeVoltageCompensation(self, id : int) -> int:
+        """
+        Set Bulk Parameter, convert MpptEpeverSetting into list of integer with length of 15
+        
+        Args :
+        setting (MpptEpeverSetting) : MpptEpeverSetting Object, refer to MpptEpeverSetting description for member information        
+        """
+        
+        request = self.setRegisters(id, MpptEpeverAddress.CHARGING_MODE[0], 0)
+        
+        if (request is None) :
+            return 0
+        
+        if (not request.isError()) :
+            return 1
+        else :
+            return 0
+        
+    def restoreSystemDefault(self, id : int) -> int :
+        """
+        Restore to factory system setting
+
+        Args :
+        id (int) : slave id of target device
+
+        Returns :
+        int : 1 if success, 0 if failed
+        """
+        request = self.client.write_coil(MpptEpeverAddress.RESTORE_SYSTEM_DEFAULTS[0], 1, unit=id)
+        if (request.isError()) or (request is None):
+            return 0
+        return 1
+    
+    def clearLog(self, id : int) -> int :
+        """
+        Clear log
+
+        Args :
+        id (int) : slave id of target device
+
+        Returns :
+        int : 1 if success, 0 if failed
+        """
+        request = self.client.write_coil(MpptEpeverAddress.CLEAR_LOG[0], 1, unit=id)
+        if (request.isError()) or (request is None):
+            return 0
+        return 1
 
     def setDateTime(self, id, dt=None):
         if dt is None:
@@ -853,9 +1109,11 @@ class MPPTEPVEPER(BaseMPPTSync):
         response = self.getRegisters(id, MpptEpeverAddress.BATTERY_INFO, input_register=True)
         batteryVoltage = -1
         batteryCurrent = -1
-        if (not response.isError() and response is not None) :
-            batteryVoltage = round(response.registers[0] / 100, 2)
-            batteryCurrent = round((((response.registers[2] << 16) + response.registers[1]) / 100) , 2)
+        
+        if (response is not None) :
+            if (not response.isError()) :
+                batteryVoltage = round(response.registers[0] / 100, 2)
+                batteryCurrent = round((((response.registers[2] << 16) + response.registers[1]) / 100) , 2)          
 
         result = {
             'battery_voltage': {
@@ -883,10 +1141,12 @@ class MPPTEPVEPER(BaseMPPTSync):
         loadVoltage = -1
         loadCurrent = -1
         loadPower = -1
-        if (not response.isError() and response is not None) :
-            loadVoltage = round(response.registers[0] / 100, 2)
-            loadCurrent = round(response.registers[1] / 100, 2)
-            loadPower = round((((response.registers[3] << 16) + response.registers[2]) / 100) , 2)
+
+        if (response is not None) :
+            if (not response.isError()) :
+                loadVoltage = round(response.registers[0] / 100, 2)
+                loadCurrent = round(response.registers[1] / 100, 2)
+                loadPower = round((((response.registers[3] << 16) + response.registers[2]) / 100) , 2)
 
         result = {
             'load_voltage': {
@@ -917,8 +1177,9 @@ class MPPTEPVEPER(BaseMPPTSync):
         """
         response = self.getRegisters(id, MpptEpeverAddress.BATTERY_SOC, input_register=True)
         soc = -1
-        if (not response.isError() and response is not None) :
-            soc = response.registers[0]
+        if (response is not None) :
+            if (not response.isError()) :
+                soc = response.registers[0]
         
         result = {
             'battery_soc': {
@@ -942,9 +1203,10 @@ class MPPTEPVEPER(BaseMPPTSync):
         response = self.getRegisters(id, MpptEpeverAddress.TEMPERATURE_INFO, input_register=True)
         batteryTemperature = -1
         deviceTemperature = -1
-        if (not response.isError() and response is not None) :
-            batteryTemperature = round(response.registers[0] / 100, 2)
-            deviceTemperature = round(response.registers[1] / 100, 2)
+        if (response is not None) :
+            if (not response.isError()) :
+                batteryTemperature = round(response.registers[0] / 100, 2)
+                deviceTemperature = round(response.registers[1] / 100, 2)
         
         result = {
             'battery_temperature': {
@@ -974,22 +1236,25 @@ class MPPTEPVEPER(BaseMPPTSync):
         batteryStatus = -1
         chargingStatus = -1
         dischargingStatus = -1
-        if (not response.isError() and response is not None) :
-            batteryStatus = response.registers[0]
-            batteryStatusDict = s.unpackBatteryStatus(batteryStatus)
-            chargingStatus = response.registers[1]
-            chargingStatusDict = s.unpackChargingStatus(chargingStatus)
-            dischargingStatus = response.registers[2]
-            dischargingStatusDict = s.unpackDischargingStatus(dischargingStatus)
-        
-            result = {
-                'battery_status' : batteryStatusDict,
-                'charging_status' : chargingStatusDict,
-                'discharging_status' : dischargingStatusDict
-            }
-            return result
-        else :
-            return None
+        if (response is not None) :
+            if (not response.isError()) :
+                batteryStatus = response.registers[0]
+                print("Battery status value :", batteryStatus)
+                batteryStatusDict = s.unpackBatteryStatus(batteryStatus)
+                chargingStatus = response.registers[1]
+                print("Charging status value :", chargingStatus)
+                chargingStatusDict = s.unpackChargingStatus(chargingStatus)
+                dischargingStatus = response.registers[2]
+                print("Discharging status value :", dischargingStatus)
+                dischargingStatusDict = s.unpackDischargingStatus(dischargingStatus)
+            
+                result = {
+                    'battery_status' : batteryStatusDict,
+                    'charging_status' : chargingStatusDict,
+                    'discharging_status' : dischargingStatusDict
+                }
+                return result
+        return None
         
     def getDischargingState(self, id : int) -> int :
         """
@@ -1006,17 +1271,17 @@ class MPPTEPVEPER(BaseMPPTSync):
         batteryStatus = -1
         chargingStatus = -1
         dischargingStatus = -1
-        if (not response.isError() and response is not None) :
-            batteryStatus = response.registers[0]
-            s.unpackBatteryStatus(batteryStatus)
-            chargingStatus = response.registers[1]
-            s.unpackChargingStatus(chargingStatus)
-            dischargingStatus = response.registers[2]
-            s.unpackDischargingStatus(dischargingStatus)
-            result = s.dischargingStatus.dischargingState 
-            return result
-        else :
-            return -1
+        if (response is not None) :
+            if (not response.isError()) :
+                batteryStatus = response.registers[0]
+                s.unpackBatteryStatus(batteryStatus)
+                chargingStatus = response.registers[1]
+                s.unpackChargingStatus(chargingStatus)
+                dischargingStatus = response.registers[2]
+                s.unpackDischargingStatus(dischargingStatus)
+                result = s.dischargingStatus.dischargingState 
+                return result
+        return -1
         
     def getChargingState(self, id : int) -> int :
         """
@@ -1033,17 +1298,17 @@ class MPPTEPVEPER(BaseMPPTSync):
         batteryStatus = -1
         chargingStatus = -1
         dischargingStatus = -1
-        if (not response.isError() and response is not None) :
-            batteryStatus = response.registers[0]
-            s.unpackBatteryStatus(batteryStatus)
-            chargingStatus = response.registers[1]
-            s.unpackChargingStatus(chargingStatus)
-            dischargingStatus = response.registers[2]
-            s.unpackDischargingStatus(dischargingStatus)
-            result = s.chargingStatus.chargingState 
-            return result
-        else :
-            return -1
+        if (response is not None) :
+            if (not response.isError()) :
+                batteryStatus = response.registers[0]
+                s.unpackBatteryStatus(batteryStatus)
+                chargingStatus = response.registers[1]
+                s.unpackChargingStatus(chargingStatus)
+                dischargingStatus = response.registers[2]
+                s.unpackDischargingStatus(dischargingStatus)
+                result = s.chargingStatus.chargingState 
+                return result
+        return -1
         
     def getRatedChargingCurrent(self, id : int) -> dict :
         """
@@ -1057,8 +1322,9 @@ class MPPTEPVEPER(BaseMPPTSync):
         """
         response = self.getRegisters(id, MpptEpeverAddress.RATED_CHARGING_CURRENT, input_register=True)
         chargingCurrent = -1
-        if (not response.isError() and response is not None) :
-            chargingCurrent = round(response.registers[0] / 100, 2)
+        if (response is not None) :
+            if (not response.isError()) :
+                chargingCurrent = round(response.registers[0] / 100, 2)
         
         result = {
             'rated_charging_current': {
@@ -1080,8 +1346,9 @@ class MPPTEPVEPER(BaseMPPTSync):
         """
         response = self.getRegisters(id, MpptEpeverAddress.RATED_LOAD_CURRENT, input_register=True)
         loadCurrent = -1
-        if (not response.isError() and response is not None) :
-            loadCurrent = round(response.registers[0] / 100, 2)
+        if (response is not None) :
+            if (not response.isError()) :
+                loadCurrent = round(response.registers[0] / 100, 2)
         
         result = {
             'rated_load_current': {

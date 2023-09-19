@@ -20,7 +20,7 @@ class MpptError(Exception) :
             return "Same setting, skip writing!"
 class ParameterSetting :
     def __init__(self) -> None:
-        self.__paramList : list[int] = []
+        self.__paramList : List[int] = []
     
     @abstractmethod
     def __eq__(self, other): 
@@ -31,19 +31,19 @@ class ParameterSetting :
         pass
     
     @abstractmethod
-    def getListParam(self) -> list[int]:
+    def getListParam(self) -> List[int]:
         pass
 
     @abstractmethod
-    def setParam(self, registerList : list[int]) -> int:
+    def setParam(self, registerList : List[int]) -> int:
         pass
 
     @property
-    def paramList(self) -> list[int] :
+    def paramList(self) -> List[int] :
         return self.__paramList.copy()
     
     @paramList.setter
-    def paramList(self, val : list[int]) :
+    def paramList(self, val : List[int]) :
         self.__paramList = val.copy()
 class BaseMPPTSync(ABC):
 
@@ -84,7 +84,7 @@ class BaseMPPTSync(ABC):
         return response_register
 
     @abstractmethod
-    def scan(self, start_id : int, end_id : int) -> list[int]:
+    def scan(self, start_id : int, end_id : int) -> List[int]:
         pass
 
     @abstractmethod
@@ -260,7 +260,7 @@ class Status() :
         elif (self.batteryStatus.batteryCondition == 0x02) :
             batteryConditionMsg = "undervoltage"
         elif (self.batteryStatus.batteryCondition == 0x03) :
-            batteryConditionMsg = "overdicharge"
+            batteryConditionMsg = "overdischarge"
         elif (self.batteryStatus.batteryCondition == 0x04) :
             batteryConditionMsg = "fault"
         else :
@@ -430,15 +430,15 @@ class Status() :
             'charging_state' : chargingStateMsg,
             'charging_condition' : chargingConditionMsg,
             'charging_status' : chargingStatusMsg,
-            'pv_input' : pvInputMsg,
+            'pv_input_short' : pvInputMsg,
             'disequilibrium' : disequilibriumMsg,
-            'load_mosfet' : loadMosfetMsg,
-            'load_state' : loadStateMsg,
-            'load_current' : loadCurrentMsg,
-            'input_current' : inputCurrentMsg,
+            'load_mosfet_short' : loadMosfetMsg,
+            'load_short' : loadStateMsg,
+            'load_over_current' : loadCurrentMsg,
+            'input_over_current' : inputCurrentMsg,
             'anti_reverse_mosfet' : antiReverseMosfetMsg,
             'charging_anti_reverse_mosfet' : chargingAntiReverseMosfetMsg,
-            'charging_mosfet' : chargingMosfetMsg,
+            'charging_mosfet_short' : chargingMosfetMsg,
             'input_voltage_status' : inputVoltageMsg,
         }
 
@@ -563,13 +563,13 @@ class Status() :
         result = {
             'discharging_state' : dischargingStateMsg,
             'discharging_condition' : dischargingConditionMsg,
-            'output_state' : outputStateMsg,
-            'boost_state' : boostStateMsg,
+            'output_voltage' : outputStateMsg,
+            'boost_voltage' : boostStateMsg,
             'high_voltage_side' : highVoltageSideMsg,
             'input_voltage' : inputVoltageMsg,
             'output_voltage' : outputVoltageMsg,
             'stop_discharging' : stopDischargingMsg,
-            'discharge' : dischargeMsg,
+            'discharge_short' : dischargeMsg,
             'discharging_output' : dischargingOutputMsg,
             'output_power' : outputPowerMsg,
             'input_voltage' : inputVoltageMsg,
