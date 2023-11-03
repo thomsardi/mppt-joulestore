@@ -1,20 +1,20 @@
-from mppt.mpptepveper.mppt_epveper import MPPTEPVEPER, MpptEpeverSetting, EpeverParserSetting
+from mppt.mpptepveper.mppt_epveper import MpptEpeverTCP, MpptEpeverSetting, EpeverParserSetting
 from mppt.base import MpptError
 import json
 import time
 from typing import List
 
 if __name__ == "__main__" :
-    epeverSettingfile = json.load(open('mppt/mpptepveper/register_config.json')) #convert the json file into dict
-    epeverPort = epeverSettingfile['port'] #get port name from register_config.json file
-    mpptEpever =  MPPTEPVEPER(port=epeverPort, timeout=0.1) #setup modbus with specified port, 115200 baudrate, 0.1s timeout
+    epeverSettingfile = json.load(open('mppt/mpptepveper/register_config_tcp.json')) #convert the json file into dict
+    epeverHost = epeverSettingfile['host'] #get port name from register_config.json file
+    mpptEpever =  MpptEpeverTCP(host=epeverHost, timeout=1) #setup modbus with specified port, 115200 baudrate, 0.1s timeout
     parser = EpeverParserSetting() #create ParserSetting object
     epeverSettingList : List[MpptEpeverSetting] = parser.parse(epeverSettingfile) #get value from "parameter" key 
 
     for a in epeverSettingList : #for loop to write a new setting
         mpptEpever.change_setting(a) #change setting
 
-    slaveList = mpptEpever.scan(1,3) #start id scan
+    slaveList = mpptEpever.scan(1,2) #start id scan
     print("List of connected slave :", slaveList)
 
     while(1) :

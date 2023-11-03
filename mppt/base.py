@@ -1,6 +1,7 @@
 import asyncio
 import json
 from pymodbus.client.sync import ModbusSerialClient as ModbusClient
+from pymodbus.client.sync import ModbusTcpClient as ModbusTcpClient
 from enum import Enum
 from typing import List
 from abc import ABC, abstractmethod
@@ -18,6 +19,7 @@ class MpptError(Exception) :
             return "Modbus write failed!"
         else :
             return "Same setting, skip writing!"
+        
 class ParameterSetting :
     def __init__(self) -> None:
         self.__paramList : List[int] = []
@@ -45,43 +47,11 @@ class ParameterSetting :
     @paramList.setter
     def paramList(self, val : List[int]) :
         self.__paramList = val.copy()
+    
 class BaseMPPTSync(ABC):
 
-    def __init__(self, port, baudrate, timeout=1):
-        self.__port = port
-        self.__baudrate = baudrate
-        self.__timeout = timeout
-        self.client = ModbusClient(port=port, baudrate=baudrate, method='rtu',timeout=timeout)
-        self.modbusInit = True
-
-    @property
-    def port(self) -> str:
-        return self.__port
-
-    @property
-    def baudrate(self) -> int:
-        return self.__baudrate
-
-    def begin(self, port : str, baudrate : int, method : str, timeout : float) :
-        self.client = ModbusClient(port=port, baudrate=baudrate, method=method, timeout=timeout)
-        self.modbusInit = True
-
-    def end(self) :
-        self.client = None
-        self.modbusInit = False
-
-    def setRegisters(self, id:int, addr:int, val:list):
-        if (not self.client.connect()) :
-            return None
-        request = self.client.write_registers(addr, val, unit=id)
-        self.client.close()
-        return request
-
-    def getRegisters(self, id:int, info:tuple) -> list:
-        addr = info[0]
-        length = info[1]
-        response_register = self.client.read_holding_registers(addr, length, unit=id)
-        return response_register
+    def __init__(self):
+        pass
 
     @abstractmethod
     def scan(self, start_id : int, end_id : int) -> List[int]:
@@ -105,6 +75,10 @@ class BaseMPPTSync(ABC):
 
     @abstractmethod
     def get_load_state(self, id : int) -> int:
+        pass
+
+    @abstractmethod
+    def get_status_info(self, id : int) -> dict :
         pass
 
     @abstractmethod
@@ -183,7 +157,8 @@ class BatteryRatedVoltage(Enum) :
     VOLTAGE_110V = 6
     VOLTAGE_120V = 7
     VOLTAGE_220V = 8
-    VOLTAGE_240V = 9      
+    VOLTAGE_240V = 9   
+
 class ParserSetting() :
     def __init__(self) -> None:
         pass
@@ -239,6 +214,10 @@ class Status() :
         self.batteryStatus = BatteryStatus()
         self.chargingStatus = ChargingStatus()
         self.dischargingStatus = DischargingStatus()
+    
+    def extractBit(self, val : int, pos : int) -> bool :
+        result = (val >> pos) & 1
+        return result
 
     def unpackBatteryStatus(self, val : int) -> dict :
         """
