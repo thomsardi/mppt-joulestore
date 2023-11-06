@@ -49,5 +49,5 @@ if __name__ == "__main__" :
             print(mpptSrne.get_battery_info(slave)) #get battery info
             print(mpptSrne.get_load_info(slave)) #get load info
             print(mpptSrne.get_load_state(slave)) #get load state
-            time.sleep(0.1) #always add sleep when using modbus within for loop. without sleep, the modbus result always failed
-        time.sleep(0.1)
+            time.sleep(0.5) #always add sleep when using modbus within for loop. without sleep, the modbus result always failed
+        time.sleep(0.5)

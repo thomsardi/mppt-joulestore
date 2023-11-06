@@ -7,7 +7,7 @@ from .mppt_srne_utils import *
 
 class BaseMpptSrne(BaseMPPTSync):
     def __init__(self):
-        super.__init__()
+        super().__init__()
         self.__connectedSlaveList = []
         self.client : BaseModbusClient = None
 
@@ -281,25 +281,14 @@ class BaseMpptSrne(BaseMPPTSync):
 
         if (len(value) == 19) :
             request = self.setRegisters(setting.id, MpptSrneAddress.SETTING_PARAMETER[0], value)
+            if (request is None) :
+                return 0
             if (not request.isError()) :
                 return 1
             else :
                 return 0
         else :
             return 0
-
-    def getPVInfo(self, id:int):
-        response = self.getHoldingRegisters(id, MpptSrneAddress.PV_INFO)
-        return {
-            'pv_voltage': {
-                'value': response.registers[0] * 0.01,
-                'satuan': 'Volt'
-            },
-            'pv_current': {
-                'value': response.registers[1] * 0.01,
-                'satuan': 'Ampere'
-            }
-        }
     
     def getCurrentSetting(self, id : int) -> MpptSrneSetting :
         """
@@ -314,12 +303,11 @@ class BaseMpptSrne(BaseMPPTSync):
         """
         response = self.getHoldingRegisters(id, MpptSrneAddress.SETTING_PARAMETER)
         p = MpptSrneSetting()
-        p.id = -1
 
         if (response is None) : 
-            return p
+            return None
         if (response.isError()) :
-            return p
+            return None
         if (not p.setParam(response.registers)) :
             print("Failed to set parameter")
             return None
